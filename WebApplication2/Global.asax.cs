@@ -13,6 +13,8 @@ namespace WebApplication2
     {
         protected void Application_Start()
         {
+            // real entrance to the application
+
             AreaRegistration.RegisterAllAreas();
             GlobalConfiguration.Configure(WebApiConfig.Register);
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
