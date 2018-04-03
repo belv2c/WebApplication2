@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Web.Http;
 using Dapper;
 using WebApplication2.Models;
+using WebApplication2.Services;
 
 namespace WebApplication2.Controllers
 {
@@ -25,10 +26,6 @@ namespace WebApplication2.Controllers
         [HttpPost, Route("placeorder")]
         public HttpResponseMessage PlaceOrder(OrderDTO newOrder)
         {
-            using (var db = new SqlConnection(ConfigurationManager.ConnectionStrings["PizzaTime"].ConnectionString))
-            {
-                db.Open();
-
                 //take dto and map it onto one of our order objects
                 //object initialization
                 var order = new Order
@@ -40,16 +37,14 @@ namespace WebApplication2.Controllers
                     Cost = 10*newOrder.NumberOfPizzas
                 };
 
-               var numberAffected =  db.Execute("Insert into Orders(TypeOfPizza, NumberOfPizzas, Cost, AddressForDelivery, NameOfCustomer)" + 
-                                "Values(@TypeOfPizza, @NumberOfPizzas, @Cost, @AddressForDelivery, @NameOfCustomer)",
-                                 order);
-                if (numberAffected == 1)
-                {
-                    return Request.CreateResponse(HttpStatusCode.Created);
-                }
+                var orderService = new OrderPizzaService();
+                var success = orderService.OrderPizza(order);
 
-                return Request.CreateResponse(HttpStatusCode.InternalServerError, "Could not process order");
-            }
+                if (success)
+                    return Request.CreateResponse(HttpStatusCode.Created);
+
+                return Request.CreateResponse(HttpStatusCode.InternalServerError, 
+                    "Could not process order, please try again later... "); 
         }
 
         // setup a connection to my pizzatime db
@@ -65,6 +60,24 @@ namespace WebApplication2.Controllers
 
 
                 var orders = db.QueryFirst<Order>("select * from Orders where Id = @id", new { id });
+
+                return Request.CreateResponse(HttpStatusCode.OK, orders);
+            }
+        }
+
+        // setup a connection to my pizzatime db
+        [HttpGet, Route("")]
+        public HttpResponseMessage GetOrder(string firstLetter)
+        {
+            using (var db = new SqlConnection(ConfigurationManager.ConnectionStrings["PizzaTime"].ConnectionString))
+            {
+                db.Open();
+
+                // Query for the first order object and creating an anonymous type
+
+                var orders = db.QueryFirst<Order>("select *" +
+                                                   "from Orders" +
+                                                   "where TypeOfPizza = @firstLetter", new { firstLetter });
 
                 return Request.CreateResponse(HttpStatusCode.OK, orders);
             }
